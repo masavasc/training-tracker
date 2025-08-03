@@ -8,25 +8,54 @@
     body {
       font-family: sans-serif;
       padding: 1rem;
-      background-color: #f4f8fb;
+      background-color: #4a90e2;
       color: #333;
     }
     h1, h2 {
-      color: #0057a7;
+      color: #fff;
+      text-align: center;
     }
     label, select, textarea, button {
       display: block;
-      margin: 0.5rem 0;
-      width: 100%;
+      margin: 0.5rem auto;
+      width: 90%;
     }
     select[multiple] {
       height: 8em;
+    }
+    .category-boxes {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 1rem;
+    }
+    .box {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      width: 45%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .box h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    .calendar-title {
+      background: #fff;
+      color: #333;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      font-weight: bold;
     }
     .calendar {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 0.5rem;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
     }
     .day {
       background: #fff;
@@ -49,11 +78,8 @@
       margin: 1px;
       border-radius: 50%;
     }
-    .dot.三角筋 { background: #007bff; }
-    .dot.腹筋 { background: #28a745; }
-    .dot.ジョギング { background: #ffc107; }
-    .dot.腕立て伏せ { background: #dc3545; }
-    .dot.エアロビクス { background: #6f42c1; }
+    .dot.筋トレ { background: red; }
+    .dot.有酸素 { background: yellow; }
     .details {
       margin-top: 1rem;
       background: #fff;
@@ -83,7 +109,25 @@
 
   <button onclick="saveRecord()">記録する</button>
 
-  <h2>カレンダー表示</h2>
+  <div class="category-boxes">
+    <div class="box">
+      <h3 style="color:red;">筋トレ</h3>
+      <ul>
+        <li>3／7腕立て伏せ</li>
+        <li>三角筋</li>
+        <li>腹筋</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3 style="color:gold;">有酸素</h3>
+      <ul>
+        <li>エアロビクス</li>
+        <li>ジョギング</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="calendar-title" id="calendarTitle"></div>
   <div class="calendar" id="calendar"></div>
 
   <div class="details" id="recordDetails">
@@ -96,16 +140,16 @@
     const menuInput = document.getElementById('menu');
     const noteInput = document.getElementById('note');
     const calendarDiv = document.getElementById('calendar');
+    const calendarTitle = document.getElementById('calendarTitle');
     const detailsDiv = document.getElementById('detailsContent');
 
     dateInput.valueAsDate = new Date();
 
-    function normalize(item) {
-      if (item.includes('三角筋')) return '三角筋';
-      if (item.includes('腹筋')) return '腹筋';
-      if (item.includes('ジョギング')) return 'ジョギング';
-      if (item.includes('腕立て')) return '腕立て伏せ';
-      if (item.includes('エアロビクス')) return 'エアロビクス';
+    function getCategory(item) {
+      const muscle = ['三角筋', '腹筋', '3／7腕立て伏せ'];
+      const cardio = ['ジョギング', 'エアロビクス'];
+      if (muscle.includes(item)) return '筋トレ';
+      if (cardio.includes(item)) return '有酸素';
       return 'その他';
     }
 
@@ -133,6 +177,7 @@
       const today = new Date();
       const year = today.getFullYear();
       const month = today.getMonth();
+      calendarTitle.textContent = `${year}年${month + 1}月`;
 
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
@@ -157,7 +202,7 @@
           const seen = new Set();
           matched.forEach(m => {
             m.items.forEach(item => {
-              const cat = normalize(item);
+              const cat = getCategory(item);
               if (!seen.has(cat)) {
                 seen.add(cat);
                 const dot = document.createElement('div');
