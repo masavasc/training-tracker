@@ -1,25 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>週3トレーニング記録アプリ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      background-color: #4a90e2;
+      color: #333;
+    }
+    h1, h2 {
+      color: #fff;
+      text-align: center;
+    }
+    label, textarea, button {
+      display: block;
+      margin: 0.5rem auto;
+      width: 90%;
+    }
+    .category-boxes {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 1rem;
+    }
+    .box {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      width: 45%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .box h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    .calendar-title {
+      background: #fff;
+      color: #333;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      font-weight: bold;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .day {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      min-height: 60px;
+      padding: 0.5rem;
+      text-align: center;
+      position: relative;
+    }
+    .day .dots {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.3rem;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      margin: 1px;
+      border-radius: 50%;
+    }
+    .dot.筋トレ { background: red; }
+    .dot.有酸素 { background: yellow; }
+    .details {
+      margin-top: 1rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>トレーニング記録</h1>
 
+  <label for="date">日付:</label>
+  <input type="date" id="date" />
 
   <label for="note">コメント（任意）:</label>
   <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
 
-  <button onclick="saveRecord()">記録する</button>
-
   <div class="category-boxes">
-    <p style="text-align:center; color:white; font-weight:bold;">以下のボックスから種目を選択してください（複数可）</p>
     <div class="box">
       <h3 style="color:red;">筋トレ</h3>
       <ul>
-<li><input type="checkbox" class="exercise" value="エアロビクス"> エアロビクス</li>
-<li><input type="checkbox" class="exercise" value="ジョギング"> ジョギング</li></ul>
+        <li><input type="checkbox" class="exercise" value="3／7腕立て伏せ"> 3／7腕立て伏せ</li>
+        <li><input type="checkbox" class="exercise" value="三角筋"> 三角筋</li>
+        <li><input type="checkbox" class="exercise" value="腹筋"> 腹筋</li>
+      </ul>
     </div>
     <div class="box">
       <h3 style="color:gold;">有酸素</h3>
       <ul>
-<li><input type="checkbox" class="exercise" value="エアロビクス"> エアロビクス</li>
-<li><input type="checkbox" class="exercise" value="ジョギング"> ジョギング</li></ul>
+        <li><input type="checkbox" class="exercise" value="エアロビクス"> エアロビクス</li>
+        <li><input type="checkbox" class="exercise" value="ジョギング"> ジョギング</li>
+      </ul>
     </div>
   </div>
+
+  <button onclick="saveRecord()">記録する</button>
 
   <div class="calendar-title" id="calendarTitle"></div>
   <div class="calendar" id="calendar"></div>
@@ -31,7 +124,6 @@
 
   <script>
     const dateInput = document.getElementById('date');
-    const menuInput = document.getElementById('menu');
     const noteInput = document.getElementById('note');
     const calendarDiv = document.getElementById('calendar');
     const calendarTitle = document.getElementById('calendarTitle');
