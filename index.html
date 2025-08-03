@@ -37,20 +37,23 @@
       text-align: center;
       position: relative;
     }
-    .day.marked {
-      background-color: #d0ebff;
-      border-color: #007bff;
+    .day .dots {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.3rem;
     }
-    .day .dot {
+    .dot {
       width: 8px;
       height: 8px;
-      background: #007bff;
+      margin: 1px;
       border-radius: 50%;
-      position: absolute;
-      bottom: 5px;
-      left: 50%;
-      transform: translateX(-50%);
     }
+    .dot.三角筋 { background: #007bff; }
+    .dot.腹筋 { background: #28a745; }
+    .dot.ジョギング { background: #ffc107; }
+    .dot.腕立て伏せ { background: #dc3545; }
+    .dot.エアロビクス { background: #6f42c1; }
     .details {
       margin-top: 1rem;
       background: #fff;
@@ -69,11 +72,10 @@
   <label for="menu">トレーニング種目（複数選択可）:</label>
   <select id="menu" multiple>
     <option>3／7腕立て伏せ</option>
-    <option>上腕三角筋　横</option>
-    <option>上腕三角筋　前</option>
-    <option>上腕三角筋　後</option>
+    <option>三角筋</option>
     <option>腹筋</option>
     <option>ジョギング</option>
+    <option>エアロビクス</option>
   </select>
 
   <label for="note">コメント（任意）:</label>
@@ -97,6 +99,15 @@
     const detailsDiv = document.getElementById('detailsContent');
 
     dateInput.valueAsDate = new Date();
+
+    function normalize(item) {
+      if (item.includes('三角筋')) return '三角筋';
+      if (item.includes('腹筋')) return '腹筋';
+      if (item.includes('ジョギング')) return 'ジョギング';
+      if (item.includes('腕立て')) return '腕立て伏せ';
+      if (item.includes('エアロビクス')) return 'エアロビクス';
+      return 'その他';
+    }
 
     function saveRecord() {
       const date = dateInput.value;
@@ -141,10 +152,21 @@
         dayDiv.textContent = d;
 
         if (matched.length > 0) {
-          dayDiv.classList.add('marked');
-          const dot = document.createElement('div');
-          dot.className = 'dot';
-          dayDiv.appendChild(dot);
+          const dotsDiv = document.createElement('div');
+          dotsDiv.className = 'dots';
+          const seen = new Set();
+          matched.forEach(m => {
+            m.items.forEach(item => {
+              const cat = normalize(item);
+              if (!seen.has(cat)) {
+                seen.add(cat);
+                const dot = document.createElement('div');
+                dot.className = 'dot ' + cat;
+                dotsDiv.appendChild(dot);
+              }
+            });
+          });
+          dayDiv.appendChild(dotsDiv);
           dayDiv.onclick = () => {
             detailsDiv.innerHTML = `<strong>${dateStr}</strong><br/>` + matched.map(m => m.items.map(i => `● ${i}`).join('<br/>') + (m.note ? `<br/><em>${m.note}</em>` : '')).join('<hr/>');
           };
