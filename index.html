@@ -15,26 +15,28 @@
       color: #fff;
       text-align: center;
     }
-    label, textarea, button {
-      display: block;
-      margin: 0.5rem auto;
-      width: 90%;
-    }
-    .category-boxes {
+    .exercise-grid {
       display: flex;
       justify-content: space-around;
-      margin-bottom: 1rem;
+      margin: 1rem 0;
     }
-    .box {
+    .exercise-box {
       background: white;
       border-radius: 10px;
       padding: 1rem;
       width: 45%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-    .box h3 {
+    .exercise-box h3 {
       margin-top: 0;
-      font-size: 1.2rem;
+    }
+    .exercise-label {
+      display: block;
+      cursor: pointer;
+      padding: 0.25rem 0;
+    }
+    .exercise-label:hover {
+      text-decoration: underline;
     }
     .calendar-title {
       background: #fff;
@@ -77,11 +79,11 @@
     .dot.筋トレ { background: red; }
     .dot.有酸素 { background: yellow; }
     .details {
-      margin-top: 1rem;
-      background: #fff;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: none;
+    }
+    button.clear-btn {
+      margin: 1rem auto;
+      display: block;
     }
   </style>
 </head>
@@ -91,45 +93,43 @@
   <label for="date">日付:</label>
   <input type="date" id="date" />
 
+  <div class="exercise-grid">
+    <div class="exercise-box">
+      <h3 style="color:red">筋トレ</h3>
+      <span class="exercise-label" onclick="toggleExercise('3／7腕立て伏せ')">3／7腕立て伏せ</span>
+      <span class="exercise-label" onclick="toggleExercise('三角筋')">三角筋</span>
+      <span class="exercise-label" onclick="toggleExercise('腹筋')">腹筋</span>
+    </div>
+    <div class="exercise-box">
+      <h3 style="color:gold">有酸素</h3>
+      <span class="exercise-label" onclick="toggleExercise('エアロビクス')">エアロビクス</span>
+      <span class="exercise-label" onclick="toggleExercise('ジョギング')">ジョギング</span>
+    </div>
+  </div>
+
   <label for="note">コメント（任意）:</label>
   <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
 
-  <div class="category-boxes">
-    <div class="box">
-      <h3 style="color:red;">筋トレ</h3>
-      <ul>
-        <li><input type="checkbox" class="exercise" value="3／7腕立て伏せ"> 3／7腕立て伏せ</li>
-        <li><input type="checkbox" class="exercise" value="三角筋"> 三角筋</li>
-        <li><input type="checkbox" class="exercise" value="腹筋"> 腹筋</li>
-      </ul>
-    </div>
-    <div class="box">
-      <h3 style="color:gold;">有酸素</h3>
-      <ul>
-        <li><input type="checkbox" class="exercise" value="エアロビクス"> エアロビクス</li>
-        <li><input type="checkbox" class="exercise" value="ジョギング"> ジョギング</li>
-      </ul>
-    </div>
-  </div>
-
   <button onclick="saveRecord()">記録する</button>
+  <button class="clear-btn" onclick="clearAllRecords()">すべての記録を消去する</button>
 
   <div class="calendar-title" id="calendarTitle"></div>
   <div class="calendar" id="calendar"></div>
-
-  <div class="details" id="recordDetails">
-    <h2>詳細表示</h2>
-    <div id="detailsContent">日付を選択してください。</div>
-  </div>
 
   <script>
     const dateInput = document.getElementById('date');
     const noteInput = document.getElementById('note');
     const calendarDiv = document.getElementById('calendar');
     const calendarTitle = document.getElementById('calendarTitle');
-    const detailsDiv = document.getElementById('detailsContent');
+    let selectedExercises = [];
 
     dateInput.valueAsDate = new Date();
+
+    function toggleExercise(name) {
+      const idx = selectedExercises.indexOf(name);
+      if (idx === -1) selectedExercises.push(name);
+      else selectedExercises.splice(idx, 1);
+    }
 
     function getCategory(item) {
       const muscle = ['三角筋', '腹筋', '3／7腕立て伏せ'];
@@ -141,21 +141,27 @@
 
     function saveRecord() {
       const date = dateInput.value;
-      const selectedOptions = Array.from(document.querySelectorAll('.exercise:checked')).map(cb => cb.value);
       const note = noteInput.value;
 
-      if (!date || selectedOptions.length === 0) {
+      if (!date || selectedExercises.length === 0) {
         alert('日付とトレーニング種目は必須です');
         return;
       }
 
-      const record = { date, items: selectedOptions, note };
+      const record = { date, items: [...selectedExercises], note };
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
       records.push(record);
       localStorage.setItem('trainingRecords', JSON.stringify(records));
-      renderCalendar();
+      selectedExercises = [];
       noteInput.value = '';
-      document.querySelectorAll('.exercise').forEach(cb => cb.checked = false);
+      renderCalendar();
+    }
+
+    function clearAllRecords() {
+      if (confirm('すべての記録を削除しますか？')) {
+        localStorage.removeItem('trainingRecords');
+        renderCalendar();
+      }
     }
 
     function renderCalendar() {
@@ -185,21 +191,23 @@
         if (matched.length > 0) {
           const dotsDiv = document.createElement('div');
           dotsDiv.className = 'dots';
-          const seen = new Set();
           matched.forEach(m => {
             m.items.forEach(item => {
               const cat = getCategory(item);
-              if (!seen.has(cat)) {
-                seen.add(cat);
-                const dot = document.createElement('div');
-                dot.className = 'dot ' + cat;
-                dotsDiv.appendChild(dot);
-              }
+              const dot = document.createElement('div');
+              dot.className = 'dot ' + cat;
+              dotsDiv.appendChild(dot);
             });
           });
           dayDiv.appendChild(dotsDiv);
           dayDiv.onclick = () => {
-            detailsDiv.innerHTML = `<strong>${dateStr}</strong><br/>` + matched.map(m => m.items.map(i => `● ${i}`).join('<br/>') + (m.note ? `<br/><em>${m.note}</em>` : '')).join('<hr/>');
+            const win = window.open('', '_blank');
+            win.document.write(`<h2>${dateStr} の記録</h2>`);
+            matched.forEach(m => {
+              win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
+              if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
+              win.document.write('<hr>');
+            });
           };
         }
 
