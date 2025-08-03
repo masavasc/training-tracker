@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>週3トレーニング記録アプリ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      background-color: #f4f8fb;
+      color: #333;
+    }
+    h1 {
+      color: #0057a7;
+    }
+    label, select, textarea, button {
+      display: block;
+      margin: 0.5rem 0;
+      width: 100%;
+    }
+    select[multiple] {
+      height: 8em;
+    }
+    .record-list {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .record {
+      border-bottom: 1px solid #ccc;
+      padding: 0.5rem 0;
+    }
+    .record:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>トレーニング記録</h1>
+
+  <label for="date">日付:</label>
+  <input type="date" id="date" />
+
+  <label for="menu">トレーニング種目（複数選択可）:</label>
+  <select id="menu" multiple>
+    <option>3／7腕立て伏せ</option>
+    <option>上腕三角筋　横</option>
+    <option>上腕三角筋　前</option>
+    <option>上腕三角筋　後</option>
+    <option>腹筋</option>
+    <option>ジョギング</option>
+  </select>
+
+  <label for="note">コメント（任意）:</label>
+  <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
+
+  <button onclick="saveRecord()">記録する</button>
+
+  <div class="record-list" id="recordList">
+    <h2>これまでの記録</h2>
+    <div id="records"></div>
+  </div>
+
+  <script>
+    const dateInput = document.getElementById('date');
+    const menuInput = document.getElementById('menu');
+    const noteInput = document.getElementById('note');
+    const recordsDiv = document.getElementById('records');
+
+    // 今日の日付を自動セット
+    dateInput.valueAsDate = new Date();
+
+    function saveRecord() {
+      const date = dateInput.value;
+      const selectedOptions = Array.from(menuInput.selectedOptions).map(o => o.text);
+      const note = noteInput.value;
+
+      if (!date || selectedOptions.length === 0) {
+        alert('日付とトレーニング種目は必須です');
+        return;
+      }
+
+      const record = { date, items: selectedOptions, note };
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      records.push(record);
+      localStorage.setItem('trainingRecords', JSON.stringify(records));
+      renderRecords();
+      noteInput.value = '';
+      menuInput.selectedIndex = -1;
+    }
+
+    function renderRecords() {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      recordsDiv.innerHTML = '';
+      records.slice().reverse().forEach(r => {
+        const el = document.createElement('div');
+        el.className = 'record';
+        el.innerHTML = `<strong>${r.date}</strong><br/>${r.items.join(', ')}<br/><em>${r.note || ''}</em>`;
+        recordsDiv.appendChild(el);
+      });
+    }
+
+    renderRecords();
+  </script>
+</body>
+</html>
