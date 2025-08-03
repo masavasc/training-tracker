@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>週3トレーニング記録アプリ</title>
+  <title>週間トレーニング記録アプリ</title>
   <style>
     body {
       font-family: sans-serif;
@@ -110,10 +110,8 @@
 </head>
 <body>
   <h1>トレーニング記録</h1>
-
   <label for="date">日付:</label>
   <input type="date" id="date" style="width:100%" />
-
   <div class="exercise-grid">
     <div class="exercise-box">
       <h3 style="color:red">筋トレ</h3>
@@ -127,14 +125,11 @@
       <span class="exercise-label" onclick="toggleExercise(this, 'ジョギング')">ジョギング</span>
     </div>
   </div>
-
   <label for="note">コメント（任意）:</label>
   <textarea id="note" rows="2" style="width:100%" placeholder="今日の感想や特記事項など"></textarea>
-
   <button id="saveButton" onclick="saveRecord()">記録する</button>
   <button onclick="exportCSV()">CSVをエクスポート</button>
   <button class="clear-btn" onclick="clearAllRecords()">すべての記録を消去する</button>
-
   <div class="calendar-title">
     <div class="calendar-controls">
       <button onclick="changeMonth(-1)">⬅ 前月</button>
@@ -142,13 +137,10 @@
       <button onclick="changeMonth(1)">次月 ➡</button>
     </div>
   </div>
-
   <div class="weekday-labels">
     <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
   </div>
-
   <div class="calendar" id="calendar"></div>
-
   <script>
     const dateInput = document.getElementById('date');
     const noteInput = document.getElementById('note');
@@ -200,9 +192,9 @@
 
     function exportCSV() {
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      let csv = '日付,トレーニング,コメント\\n';
+      let csv = '日付,トレーニング,コメント\n';
       records.forEach(r => {
-        csv += `${r.date},"${r.items.join('; ')}",${r.note.replace(/\\n/g, ' ')}\\n`;
+        csv += `${r.date},"${r.items.join('; ')}",${r.note.replace(/\n/g, ' ')}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -262,15 +254,48 @@
           dayDiv.onclick = () => {
             const win = window.open('', '_blank');
             win.document.write(`<h2>${dateStr} の記録</h2>`);
-            matched.forEach(m => {
+            matched.forEach((m, index) => {
               win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
               if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
+              win.document.write(
+                `<button onclick="window.opener.editRecord('${dateStr}', ${index});window.close();">修正</button> ` +
+                `<button onclick="window.opener.deleteRecord('${dateStr}', ${index});window.close();">削除</button>`
+              );
               win.document.write('<hr>');
             });
           };
         }
         calendarDiv.appendChild(dayDiv);
       }
+    }
+
+    function editRecord(date, index) {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const target = records.filter(r => r.date === date)[index];
+      if (!target) return;
+      dateInput.value = target.date;
+      noteInput.value = target.note;
+      selectedExercises = [...target.items];
+      document.querySelectorAll('.exercise-label').forEach(el => {
+        el.classList.remove('selected', 'muscle', 'cardio');
+        if (selectedExercises.includes(el.textContent)) {
+          el.classList.add('selected');
+          const cat = getCategory(el.textContent);
+          el.classList.add(cat === '筋トレ' ? 'muscle' : cat === '有酸素' ? 'cardio' : '');
+        }
+      });
+      deleteRecord(date, index);
+    }
+
+    function deleteRecord(date, index) {
+      let records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const filtered = records.filter((r, i) => {
+        if (r.date !== date) return true;
+        const sameDate = records.filter(x => x.date === date);
+        return !(sameDate.indexOf(r) === index);
+      });
+      localStorage.setItem('trainingRecords', JSON.stringify(filtered));
+      renderCalendar();
     }
 
     renderCalendar();
