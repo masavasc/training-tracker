@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>週3トレーニング記録アプリ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      background-color: #f4f8fb;
+      color: #333;
+    }
+    h1, h2 {
+      color: #0057a7;
+    }
+    label, select, textarea, button {
+      display: block;
+      margin: 0.5rem 0;
+      width: 100%;
+    }
+    select[multiple] {
+      height: 8em;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .day {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      min-height: 60px;
+      padding: 0.5rem;
+      text-align: center;
+      position: relative;
+    }
+    .day.marked {
+      background-color: #d0ebff;
+      border-color: #007bff;
+    }
+    .day .dot {
+      width: 8px;
+      height: 8px;
+      background: #007bff;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .details {
+      margin-top: 1rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>トレーニング記録</h1>
+
+  <label for="date">日付:</label>
+  <input type="date" id="date" />
+
+  <label for="menu">トレーニング種目（複数選択可）:</label>
+  <select id="menu" multiple>
+    <option>3／7腕立て伏せ</option>
+    <option>上腕三角筋　横</option>
+    <option>上腕三角筋　前</option>
+    <option>上腕三角筋　後</option>
+    <option>腹筋</option>
+    <option>ジョギング</option>
+  </select>
+
+  <label for="note">コメント（任意）:</label>
+  <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
+
+  <button onclick="saveRecord()">記録する</button>
+
+  <h2>カレンダー表示</h2>
+  <div class="calendar" id="calendar"></div>
+
+  <div class="details" id="recordDetails">
+    <h2>詳細表示</h2>
+    <div id="detailsContent">日付を選択してください。</div>
+  </div>
+
+  <script>
+    const dateInput = document.getElementById('date');
+    const menuInput = document.getElementById('menu');
+    const noteInput = document.getElementById('note');
+    const calendarDiv = document.getElementById('calendar');
+    const detailsDiv = document.getElementById('detailsContent');
+
+    dateInput.valueAsDate = new Date();
+
+    function saveRecord() {
+      const date = dateInput.value;
+      const selectedOptions = Array.from(menuInput.selectedOptions).map(o => o.text);
+      const note = noteInput.value;
+
+      if (!date || selectedOptions.length === 0) {
+        alert('日付とトレーニング種目は必須です');
+        return;
+      }
+
+      const record = { date, items: selectedOptions, note };
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      records.push(record);
+      localStorage.setItem('trainingRecords', JSON.stringify(records));
+      renderCalendar();
+      noteInput.value = '';
+      menuInput.selectedIndex = -1;
+    }
+
+    function renderCalendar() {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      calendarDiv.innerHTML = '';
+
+      for (let i = 0; i < firstDay.getDay(); i++) {
+        calendarDiv.appendChild(document.createElement('div'));
+      }
+
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+        const matched = records.filter(r => r.date === dateStr);
+
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day';
+        dayDiv.textContent = d;
+
+        if (matched.length > 0) {
+          dayDiv.classList.add('marked');
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          dayDiv.appendChild(dot);
+          dayDiv.onclick = () => {
+            detailsDiv.innerHTML = `<strong>${dateStr}</strong><br/>` + matched.map(m => m.items.map(i => `● ${i}`).join('<br/>') + (m.note ? `<br/><em>${m.note}</em>` : '')).join('<hr/>');
+          };
+        }
+
+        calendarDiv.appendChild(dayDiv);
+      }
+    }
+
+    renderCalendar();
+  </script>
+</body>
+</html>
