@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>週間トレーニング記録アプリ</title>
+  <title>週3トレーニング記録アプリ</title>
   <style>
     body {
       font-family: sans-serif;
@@ -41,15 +41,33 @@
       background: #eee;
       transition: background 0.3s;
     }
-    .exercise-label.selected {
-      background: #ffd700;
+    .exercise-label.selected.muscle {
+      background: red;
+      color: #fff;
     }
-    .calendar-title {
+    .exercise-label.selected.cardio {
+      background: gold;
+      color: #333;
+    }
+    button#saveButton {
+      font-size: 1.2rem;
+      padding: 1rem 2rem;
+      margin: 1rem auto;
+      display: block;
+      background-color: #0055cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+    }
+    .weekday-labels {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
       text-align: center;
-      margin: 1rem 0 0.5rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
     }
-    .calendar-controls button {
-      margin: 0 10px;
+    .weekday-labels span:nth-child(1) {
+      color: red;
     }
     .calendar {
       display: grid;
@@ -68,7 +86,7 @@
       text-align: center;
       position: relative;
     }
-    .day .dots {
+    .dots {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
@@ -82,9 +100,6 @@
     }
     .dot.筋トレ { background: red; }
     .dot.有酸素 { background: yellow; }
-    .details {
-      display: none;
-    }
     button.clear-btn {
       margin: 3rem auto 0;
       display: block;
@@ -116,7 +131,7 @@
   <label for="note">コメント（任意）:</label>
   <textarea id="note" rows="2" style="width:100%" placeholder="今日の感想や特記事項など"></textarea>
 
-  <button onclick="saveRecord()">記録する</button>
+  <button id="saveButton" onclick="saveRecord()">記録する</button>
   <button onclick="exportCSV()">CSVをエクスポート</button>
   <button class="clear-btn" onclick="clearAllRecords()">すべての記録を消去する</button>
 
@@ -127,6 +142,11 @@
       <button onclick="changeMonth(1)">次月 ➡</button>
     </div>
   </div>
+
+  <div class="weekday-labels">
+    <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+  </div>
+
   <div class="calendar" id="calendar"></div>
 
   <script>
@@ -145,9 +165,11 @@
       if (idx === -1) {
         selectedExercises.push(name);
         el.classList.add('selected');
+        const cat = getCategory(name);
+        el.classList.add(cat === '筋トレ' ? 'muscle' : cat === '有酸素' ? 'cardio' : '');
       } else {
         selectedExercises.splice(idx, 1);
-        el.classList.remove('selected');
+        el.classList.remove('selected', 'muscle', 'cardio');
       }
     }
 
@@ -172,15 +194,15 @@
       localStorage.setItem('trainingRecords', JSON.stringify(records));
       selectedExercises = [];
       noteInput.value = '';
-      document.querySelectorAll('.exercise-label').forEach(el => el.classList.remove('selected'));
+      document.querySelectorAll('.exercise-label').forEach(el => el.classList.remove('selected', 'muscle', 'cardio'));
       renderCalendar();
     }
 
     function exportCSV() {
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      let csv = '日付,トレーニング,コメント\n';
+      let csv = '日付,トレーニング,コメント\\n';
       records.forEach(r => {
-        csv += `${r.date},"${r.items.join('; ')}",${r.note.replace(/\n/g, ' ')}\n`;
+        csv += `${r.date},"${r.items.join('; ')}",${r.note.replace(/\\n/g, ' ')}\\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
