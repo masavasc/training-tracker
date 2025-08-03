@@ -11,7 +11,7 @@
       background-color: #f4f8fb;
       color: #333;
     }
-    h1 {
+    h1, h2 {
       color: #0057a7;
     }
     label, select, textarea, button {
@@ -22,19 +22,41 @@
     select[multiple] {
       height: 8em;
     }
-    .record-list {
-      margin-top: 2rem;
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .day {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      min-height: 60px;
+      padding: 0.5rem;
+      text-align: center;
+      position: relative;
+    }
+    .day.marked {
+      background-color: #d0ebff;
+      border-color: #007bff;
+    }
+    .day .dot {
+      width: 8px;
+      height: 8px;
+      background: #007bff;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .details {
+      margin-top: 1rem;
       background: #fff;
       padding: 1rem;
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .record {
-      border-bottom: 1px solid #ccc;
-      padding: 0.5rem 0;
-    }
-    .record:last-child {
-      border-bottom: none;
     }
   </style>
 </head>
@@ -59,18 +81,21 @@
 
   <button onclick="saveRecord()">記録する</button>
 
-  <div class="record-list" id="recordList">
-    <h2>これまでの記録</h2>
-    <div id="records"></div>
+  <h2>カレンダー表示</h2>
+  <div class="calendar" id="calendar"></div>
+
+  <div class="details" id="recordDetails">
+    <h2>詳細表示</h2>
+    <div id="detailsContent">日付を選択してください。</div>
   </div>
 
   <script>
     const dateInput = document.getElementById('date');
     const menuInput = document.getElementById('menu');
     const noteInput = document.getElementById('note');
-    const recordsDiv = document.getElementById('records');
+    const calendarDiv = document.getElementById('calendar');
+    const detailsDiv = document.getElementById('detailsContent');
 
-    // 今日の日付を自動セット
     dateInput.valueAsDate = new Date();
 
     function saveRecord() {
@@ -87,23 +112,49 @@
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
       records.push(record);
       localStorage.setItem('trainingRecords', JSON.stringify(records));
-      renderRecords();
+      renderCalendar();
       noteInput.value = '';
       menuInput.selectedIndex = -1;
     }
 
-    function renderRecords() {
+    function renderCalendar() {
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      recordsDiv.innerHTML = '';
-      records.slice().reverse().forEach(r => {
-        const el = document.createElement('div');
-        el.className = 'record';
-        el.innerHTML = `<strong>${r.date}</strong><br/>${r.items.join(', ')}<br/><em>${r.note || ''}</em>`;
-        recordsDiv.appendChild(el);
-      });
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      calendarDiv.innerHTML = '';
+
+      for (let i = 0; i < firstDay.getDay(); i++) {
+        calendarDiv.appendChild(document.createElement('div'));
+      }
+
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+        const matched = records.filter(r => r.date === dateStr);
+
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day';
+        dayDiv.textContent = d;
+
+        if (matched.length > 0) {
+          dayDiv.classList.add('marked');
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          dayDiv.appendChild(dot);
+          dayDiv.onclick = () => {
+            detailsDiv.innerHTML = `<strong>${dateStr}</strong><br/>` + matched.map(m => m.items.map(i => `● ${i}`).join('<br/>') + (m.note ? `<br/><em>${m.note}</em>` : '')).join('<hr/>');
+          };
+        }
+
+        calendarDiv.appendChild(dayDiv);
+      }
     }
 
-    renderRecords();
+    renderCalendar();
   </script>
 </body>
 </html>
