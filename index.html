@@ -1,221 +1,65 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>週3トレーニング記録アプリ</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      background-color: #4a90e2;
-      color: #333;
+// 変更点のみ記述します
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+
+function changeMonth(offset) {
+  currentMonth += offset;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  } else if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+  calendarTitle.textContent = `${currentYear}年${currentMonth + 1}月`;
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+  calendarDiv.innerHTML = '';
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    calendarDiv.appendChild(document.createElement('div'));
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+    const matched = records.filter(r => r.date === dateStr);
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'day';
+    dayDiv.textContent = d;
+    if (matched.length > 0) {
+      const dotsDiv = document.createElement('div');
+      dotsDiv.className = 'dots';
+      matched.forEach(m => {
+        m.items.forEach(item => {
+          const cat = getCategory(item);
+          const dot = document.createElement('div');
+          dot.className = 'dot ' + cat;
+          dotsDiv.appendChild(dot);
+        });
+      });
+      dayDiv.appendChild(dotsDiv);
+      dayDiv.onclick = () => {
+        const win = window.open('', '_blank');
+        win.document.write(`<h2>${dateStr} の記録</h2>`);
+        matched.forEach(m => {
+          win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
+          if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
+          win.document.write('<hr>');
+        });
+      };
     }
-    h1, h2 {
-      color: #fff;
-      text-align: center;
-    }
-    .exercise-grid {
-      display: flex;
-      justify-content: space-around;
-      margin: 1rem 0;
-    }
-    .exercise-box {
-      background: white;
-      border-radius: 10px;
-      padding: 1rem;
-      width: 45%;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    .exercise-box h3 {
-      margin-top: 0;
-    }
-    .exercise-label {
-      display: block;
-      cursor: pointer;
-      padding: 0.25rem 0;
-    }
-    .exercise-label:hover {
-      text-decoration: underline;
-    }
-    .calendar-title {
-      background: #fff;
-      color: #333;
-      padding: 0.5rem;
-      border-radius: 8px;
-      margin-bottom: 0.5rem;
-      text-align: center;
-      font-weight: bold;
-    }
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.5rem;
-      background: #fff;
-      padding: 1rem;
-      border-radius: 8px;
-    }
-    .day {
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      min-height: 60px;
-      padding: 0.5rem;
-      text-align: center;
-      position: relative;
-    }
-    .day .dots {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 0.3rem;
-    }
-    .dot {
-      width: 8px;
-      height: 8px;
-      margin: 1px;
-      border-radius: 50%;
-    }
-    .dot.筋トレ { background: red; }
-    .dot.有酸素 { background: yellow; }
-    .details {
-      display: none;
-    }
-    button.clear-btn {
-      margin: 1rem auto;
-      display: block;
-    }
-  </style>
-</head>
-<body>
-  <h1>トレーニング記録</h1>
+    calendarDiv.appendChild(dayDiv);
+  }
+}
 
-  <label for="date">日付:</label>
-  <input type="date" id="date" />
-
-  <div class="exercise-grid">
-    <div class="exercise-box">
-      <h3 style="color:red">筋トレ</h3>
-      <span class="exercise-label" onclick="toggleExercise('3／7腕立て伏せ')">3／7腕立て伏せ</span>
-      <span class="exercise-label" onclick="toggleExercise('三角筋')">三角筋</span>
-      <span class="exercise-label" onclick="toggleExercise('腹筋')">腹筋</span>
-    </div>
-    <div class="exercise-box">
-      <h3 style="color:gold">有酸素</h3>
-      <span class="exercise-label" onclick="toggleExercise('エアロビクス')">エアロビクス</span>
-      <span class="exercise-label" onclick="toggleExercise('ジョギング')">ジョギング</span>
-    </div>
-  </div>
-
-  <label for="note">コメント（任意）:</label>
-  <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
-
-  <button onclick="saveRecord()">記録する</button>
-  <button class="clear-btn" onclick="clearAllRecords()">すべての記録を消去する</button>
-
-  <div class="calendar-title" id="calendarTitle"></div>
-  <div class="calendar" id="calendar"></div>
-
-  <script>
-    const dateInput = document.getElementById('date');
-    const noteInput = document.getElementById('note');
-    const calendarDiv = document.getElementById('calendar');
-    const calendarTitle = document.getElementById('calendarTitle');
-    let selectedExercises = [];
-
-    dateInput.valueAsDate = new Date();
-
-    function toggleExercise(name) {
-      const idx = selectedExercises.indexOf(name);
-      if (idx === -1) selectedExercises.push(name);
-      else selectedExercises.splice(idx, 1);
-    }
-
-    function getCategory(item) {
-      const muscle = ['三角筋', '腹筋', '3／7腕立て伏せ'];
-      const cardio = ['ジョギング', 'エアロビクス'];
-      if (muscle.includes(item)) return '筋トレ';
-      if (cardio.includes(item)) return '有酸素';
-      return 'その他';
-    }
-
-    function saveRecord() {
-      const date = dateInput.value;
-      const note = noteInput.value;
-
-      if (!date || selectedExercises.length === 0) {
-        alert('日付とトレーニング種目は必須です');
-        return;
-      }
-
-      const record = { date, items: [...selectedExercises], note };
-      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      records.push(record);
-      localStorage.setItem('trainingRecords', JSON.stringify(records));
-      selectedExercises = [];
-      noteInput.value = '';
-      renderCalendar();
-    }
-
-    function clearAllRecords() {
-      if (confirm('すべての記録を削除しますか？')) {
-        localStorage.removeItem('trainingRecords');
-        renderCalendar();
-      }
-    }
-
-    function renderCalendar() {
-      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
-      calendarTitle.textContent = `${year}年${month + 1}月`;
-
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-
-      calendarDiv.innerHTML = '';
-
-      for (let i = 0; i < firstDay.getDay(); i++) {
-        calendarDiv.appendChild(document.createElement('div'));
-      }
-
-      for (let d = 1; d <= lastDay.getDate(); d++) {
-        const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-        const matched = records.filter(r => r.date === dateStr);
-
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'day';
-        dayDiv.textContent = d;
-
-        if (matched.length > 0) {
-          const dotsDiv = document.createElement('div');
-          dotsDiv.className = 'dots';
-          matched.forEach(m => {
-            m.items.forEach(item => {
-              const cat = getCategory(item);
-              const dot = document.createElement('div');
-              dot.className = 'dot ' + cat;
-              dotsDiv.appendChild(dot);
-            });
-          });
-          dayDiv.appendChild(dotsDiv);
-          dayDiv.onclick = () => {
-            const win = window.open('', '_blank');
-            win.document.write(`<h2>${dateStr} の記録</h2>`);
-            matched.forEach(m => {
-              win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
-              if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
-              win.document.write('<hr>');
-            });
-          };
-        }
-
-        calendarDiv.appendChild(dayDiv);
-      }
-    }
-
-    renderCalendar();
-  </script>
-</body>
-</html>
+// カレンダータイトル周辺にナビゲーションボタンを挿入
+const calendarTitleDiv = document.getElementById('calendarTitle');
+const navDiv = document.createElement('div');
+navDiv.style.textAlign = 'center';
+navDiv.style.marginBottom = '0.5rem';
+navDiv.innerHTML = '<button onclick="changeMonth(-1)">⬅ 前月</button> <span id="calendarTitle"></span> <button onclick="changeMonth(1)">次月 ➡</button>';
+calendarTitleDiv.replaceWith(navDiv);
+calendarTitle = document.getElementById('calendarTitle');
