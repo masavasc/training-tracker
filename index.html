@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>週間トレーニング記録アプリ</title>
+  <title>トレーニング＆体重記録</title>
   <style>
     body {
       font-family: sans-serif;
@@ -15,18 +15,30 @@
       color: #fff;
       text-align: center;
     }
+    .input-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    input[type="date"], input[type="number"], textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
     .exercise-grid {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-around;
-      margin: 1rem 0;
+      gap: 1rem;
     }
     .exercise-box {
       background: white;
       border-radius: 10px;
       padding: 1rem;
-      width: 90%;
-      margin-bottom: 1rem;
+      flex: 1 1 40%;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
     .exercise-box h3 {
@@ -59,59 +71,57 @@
       border: none;
       border-radius: 8px;
     }
-    .weekday-labels {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 0.5rem;
-    }
-    .weekday-labels span:nth-child(1) {
-      color: red;
-    }
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.5rem;
+    #chart {
+      margin-top: 2rem;
       background: #fff;
-      padding: 1rem;
       border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
     }
-    .day {
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      min-height: 60px;
-      padding: 0.5rem;
-      text-align: center;
-      position: relative;
-    }
-    .dots {
+    .bar-wrapper {
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-top: 0.3rem;
+      align-items: flex-end;
+      height: 200px;
     }
-    .dot {
-      width: 8px;
-      height: 8px;
-      margin: 1px;
+    .bar-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 6px;
+      width: 20px;
+    }
+    .block {
+      width: 100%;
+      margin-top: 1px;
+    }
+    .block.筋トレ {
+      background: red;
+      height: 15px;
+    }
+    .block.有酸素 {
+      background: orange;
+      height: 15px;
+    }
+    .weight-point {
+      background: navy;
+      color: white;
       border-radius: 50%;
-    }
-    .dot.筋トレ { background: red; }
-    .dot.有酸素 { background: orange; }
-    button.clear-btn {
-      margin: 3rem auto 0;
-      display: block;
-      font-size: 0.8rem;
-      opacity: 0.5;
+      padding: 2px 5px;
+      font-size: 0.75rem;
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
-  <h1>トレーニング記録</h1>
-  <label for="date">日付:</label>
-  <input type="date" id="date" style="width:100%" />
+  <h1>トレーニング & 体重記録</h1>
+  <div class="input-group">
+    <label for="date">日付:</label>
+    <input type="date" id="date">
+    <label for="weight">体重（kg）:</label>
+    <input type="number" id="weight" step="0.1">
+    <label for="note">コメント（任意）:</label>
+    <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
+  </div>
   <div class="exercise-grid">
     <div class="exercise-box">
       <h3 style="color:red">筋トレ</h3>
@@ -120,35 +130,20 @@
       <span class="exercise-label" onclick="toggleExercise(this, '腹筋')">腹筋</span>
     </div>
     <div class="exercise-box">
-      <h3 style="color:gold">有酸素</h3>
+      <h3 style="color:orange">有酸素</h3>
       <span class="exercise-label" onclick="toggleExercise(this, 'エアロビクス')">エアロビクス</span>
       <span class="exercise-label" onclick="toggleExercise(this, 'ジョギング')">ジョギング</span>
     </div>
   </div>
-  <label for="note">コメント（任意）:</label>
-  <textarea id="note" rows="2" style="width:100%" placeholder="今日の感想や特記事項など"></textarea>
   <button id="saveButton" onclick="saveRecord()">記録する</button>
-  <button onclick="exportCSV()">CSVをエクスポート</button>
-  <button class="clear-btn" onclick="clearAllRecords()">すべての記録を消去する</button>
-  <div class="calendar-title">
-    <div class="calendar-controls">
-      <button onclick="changeMonth(-1)">⬅ 前月</button>
-      <span id="calendarTitle"></span>
-      <button onclick="changeMonth(1)">次月 ➡</button>
-    </div>
-  </div>
-  <div class="weekday-labels">
-    <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
-  </div>
-  <div class="calendar" id="calendar"></div>
+  <div id="chart"></div>
+
   <script>
     const dateInput = document.getElementById('date');
     const noteInput = document.getElementById('note');
-    const calendarDiv = document.getElementById('calendar');
-    const calendarTitle = document.getElementById('calendarTitle');
+    const weightInput = document.getElementById('weight');
+    const chart = document.getElementById('chart');
     let selectedExercises = [];
-    let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().getMonth();
 
     dateInput.valueAsDate = new Date();
 
@@ -175,130 +170,50 @@
 
     function saveRecord() {
       const date = dateInput.value;
+      const weight = weightInput.value;
       const note = noteInput.value;
-      if (!date || selectedExercises.length === 0) {
-        alert('日付とトレーニング種目は必須です');
-        return;
-      }
-      const record = { date, items: [...selectedExercises], note };
+      if (!date) return alert('日付は必須です');
+      const record = { date, weight, items: [...selectedExercises], note };
       const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
       records.push(record);
       localStorage.setItem('trainingRecords', JSON.stringify(records));
       selectedExercises = [];
       noteInput.value = '';
+      weightInput.value = '';
       document.querySelectorAll('.exercise-label').forEach(el => el.classList.remove('selected', 'muscle', 'cardio'));
-      renderCalendar();
+      renderChart();
     }
 
-    function exportCSV() {
-      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      let csv = '日付,トレーニング,コメント\n';
-      records.forEach(r => {
-        csv += `${r.date},"${r.items.join('; ')}",${r.note.replace(/\n/g, ' ')}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'training_log.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    function renderChart() {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]')
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      chart.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bar-wrapper';
 
-    function clearAllRecords() {
-      if (confirm('すべての記録を削除しますか？')) {
-        localStorage.removeItem('trainingRecords');
-        renderCalendar();
-      }
-    }
-
-    function changeMonth(offset) {
-      currentMonth += offset;
-      if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-      } else if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-      }
-      renderCalendar();
-    }
-
-    function renderCalendar() {
-      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      calendarTitle.textContent = `${currentYear}年${currentMonth + 1}月`;
-      const firstDay = new Date(currentYear, currentMonth, 1);
-      const lastDay = new Date(currentYear, currentMonth + 1, 0);
-      calendarDiv.innerHTML = '';
-      for (let i = 0; i < firstDay.getDay(); i++) {
-        calendarDiv.appendChild(document.createElement('div'));
-      }
-      for (let d = 1; d <= lastDay.getDate(); d++) {
-        const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-        const matched = records.filter(r => r.date === dateStr);
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'day';
-        dayDiv.textContent = d;
-        if (matched.length > 0) {
-          const dotsDiv = document.createElement('div');
-          dotsDiv.className = 'dots';
-          matched.forEach(m => {
-            m.items.forEach(item => {
-              const cat = getCategory(item);
-              const dot = document.createElement('div');
-              dot.className = 'dot ' + cat;
-              dotsDiv.appendChild(dot);
-            });
+      records.forEach(rec => {
+        const col = document.createElement('div');
+        col.className = 'bar-column';
+        col.innerHTML = `<div>${rec.date.split('-')[2]}</div>`;
+        if (rec.items) {
+          rec.items.forEach(item => {
+            const block = document.createElement('div');
+            block.className = 'block ' + getCategory(item);
+            col.appendChild(block);
           });
-          dayDiv.appendChild(dotsDiv);
-          dayDiv.onclick = () => {
-            const win = window.open('', '_blank');
-            win.document.write(`<h2>${dateStr} の記録</h2>`);
-            matched.forEach((m, index) => {
-              win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
-              if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
-              win.document.write(
-                `<button onclick="window.opener.editRecord('${dateStr}', ${index});window.close();">修正</button> ` +
-                `<button onclick="window.opener.deleteRecord('${dateStr}', ${index});window.close();">削除</button>`
-              );
-              win.document.write('<hr>');
-            });
-          };
         }
-        calendarDiv.appendChild(dayDiv);
-      }
-    }
-
-    function editRecord(date, index) {
-      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      const target = records.filter(r => r.date === date)[index];
-      if (!target) return;
-      dateInput.value = target.date;
-      noteInput.value = target.note;
-      selectedExercises = [...target.items];
-      document.querySelectorAll('.exercise-label').forEach(el => {
-        el.classList.remove('selected', 'muscle', 'cardio');
-        if (selectedExercises.includes(el.textContent)) {
-          el.classList.add('selected');
-          const cat = getCategory(el.textContent);
-          el.classList.add(cat === '筋トレ' ? 'muscle' : cat === '有酸素' ? 'cardio' : '');
+        if (rec.weight) {
+          const point = document.createElement('div');
+          point.className = 'weight-point';
+          point.textContent = rec.weight + 'kg';
+          col.appendChild(point);
         }
+        wrapper.appendChild(col);
       });
-      deleteRecord(date, index);
+      chart.appendChild(wrapper);
     }
 
-    function deleteRecord(date, index) {
-      let records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-      const filtered = records.filter((r, i) => {
-        if (r.date !== date) return true;
-        const sameDate = records.filter(x => x.date === date);
-        return !(sameDate.indexOf(r) === index);
-      });
-      localStorage.setItem('trainingRecords', JSON.stringify(filtered));
-      renderCalendar();
-    }
-
-    renderCalendar();
+    renderChart();
   </script>
 </body>
 </html>
