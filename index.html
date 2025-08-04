@@ -1,116 +1,341 @@
-<script>
-function renderChart() {
-  const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]')
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  chart.innerHTML = '';
-  const wrapper = document.createElement('div');
-  wrapper.className = 'bar-wrapper';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>トレーニング＆体重記録</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #4a90e2;
+      margin: 0;
+      padding: 1rem;
+      color: #333;
+    }
+    h1 {
+      color: white;
+      text-align: center;
+    }
+    .input-group {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    input[type="date"], input[type="number"], textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .exercise-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-around;
+      margin: 1rem 0;
+    }
+    .exercise-box {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      flex: 1 1 40%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .exercise-label {
+      display: inline-block;
+      cursor: pointer;
+      margin: 0.2rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      background: #eee;
+    }
+    .exercise-label.selected.muscle {
+      background: red;
+      color: #fff;
+    }
+    .exercise-label.selected.cardio {
+      background: orange;
+      color: #333;
+    }
+    #saveButton {
+      display: block;
+      margin: 1rem auto;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      background: #0055cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+    }
+    #chart {
+      position: relative;
+      margin-top: 2rem;
+      background: #fff;
+      border-radius: 8px;
+      padding: 1rem 1rem 1rem 50px;
+      overflow-x: auto;
+      height: 260px;
+    }
+    .y-axis {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 10px 5px;
+      font-size: 0.8rem;
+      color: #333;
+      background-color: #fff;
+      z-index: 2;
+      border-right: 1px solid #ccc;
+    }
+    .bar-wrapper {
+      display: flex;
+      align-items: flex-end;
+      height: 200px;
+      position: relative;
+      z-index: 1;
+    }
+    .weight-line {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bar-column {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      margin: 0 6px;
+      width: 20px;
+      position: relative;
+    }
+    .block {
+      width: 100%;
+      margin-top: 1px;
+    }
+    .block.筋トレ {
+      background: red;
+      height: 15px;
+    }
+    .block.有酸素 {
+      background: orange;
+      height: 15px;
+    }
+    .weight-point {
+      background: navy;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 5px;
+      font-size: 0.75rem;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>トレーニング & 体重記録</h1>
 
-  const yAxis = document.createElement('div');
-  yAxis.className = 'y-axis';
-  for (let i = 80; i >= 50; i -= 5) {
-    const label = document.createElement('div');
-    label.textContent = i + 'kg';
-    yAxis.appendChild(label);
-  }
-  chart.appendChild(yAxis);
+  <div class="input-group">
+    <label for="date">日付:</label>
+    <input type="date" id="date" />
+    <label for="weight">体重（kg）:</label>
+    <input type="number" id="weight" step="0.1" />
+    <label for="note">コメント（任意）:</label>
+    <textarea id="note" rows="2" placeholder="今日の感想や特記事項など"></textarea>
+  </div>
 
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'weight-line');
-  svg.setAttribute('width', records.length * 32);
-  svg.setAttribute('height', '200');
-  chart.appendChild(svg);
+  <div class="exercise-grid">
+    <div class="exercise-box">
+      <h3>筋トレ</h3>
+      <span class="exercise-label" onclick="toggleExercise(this, '3／7腕立て伏せ')">3／7腕立て伏せ</span>
+      <span class="exercise-label" onclick="toggleExercise(this, '三角筋')">三角筋</span>
+      <span class="exercise-label" onclick="toggleExercise(this, '腹筋')">腹筋</span>
+    </div>
+    <div class="exercise-box">
+      <h3>有酸素</h3>
+      <span class="exercise-label" onclick="toggleExercise(this, 'エアロビクス')">エアロビクス</span>
+      <span class="exercise-label" onclick="toggleExercise(this, 'ジョギング')">ジョギング</span>
+    </div>
+  </div>
 
-  const points = [];
-  let prevWeight = null;
-  records.forEach((rec, idx) => {
-    const col = document.createElement('div');
-    col.className = 'bar-column';
-    col.innerHTML = `<div>${rec.date.split('-')[2]}</div>`;
-    if (rec.items) {
-      rec.items.forEach(item => {
-        const block = document.createElement('div');
-        block.className = 'block ' + getCategory(item);
-        col.appendChild(block);
+  <button id="saveButton" onclick="saveRecord()">記録する</button>
+  <div id="chart"></div>
+
+  <script>
+    const dateInput = document.getElementById('date');
+    const weightInput = document.getElementById('weight');
+    const noteInput = document.getElementById('note');
+    const chart = document.getElementById('chart');
+    let selectedExercises = [];
+
+    function getCategory(item) {
+      const muscle = ['三角筋', '腹筋', '3／7腕立て伏せ'];
+      const cardio = ['ジョギング', 'エアロビクス'];
+      if (muscle.includes(item)) return '筋トレ';
+      if (cardio.includes(item)) return '有酸素';
+      return 'その他';
+    }
+
+    function toggleExercise(el, name) {
+      const idx = selectedExercises.indexOf(name);
+      if (idx === -1) {
+        selectedExercises.push(name);
+        el.classList.add('selected');
+        const cat = getCategory(name);
+        el.classList.add(cat === '筋トレ' ? 'muscle' : 'cardio');
+      } else {
+        selectedExercises.splice(idx, 1);
+        el.classList.remove('selected', 'muscle', 'cardio');
+      }
+    }
+
+    function saveRecord() {
+      const date = dateInput.value;
+      const weight = weightInput.value;
+      const note = noteInput.value;
+      if (!date) return alert('日付は必須です');
+      const record = { date, weight, items: [...selectedExercises], note };
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      records.push(record);
+      localStorage.setItem('trainingRecords', JSON.stringify(records));
+      selectedExercises = [];
+      noteInput.value = '';
+      weightInput.value = '';
+      document.querySelectorAll('.exercise-label').forEach(el => el.classList.remove('selected', 'muscle', 'cardio'));
+      renderChart();
+    }
+
+    function renderChart() {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]')
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      chart.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bar-wrapper';
+
+      const yAxis = document.createElement('div');
+      yAxis.className = 'y-axis';
+      for (let i = 80; i >= 50; i -= 5) {
+        const label = document.createElement('div');
+        label.textContent = i + 'kg';
+        yAxis.appendChild(label);
+      }
+      chart.appendChild(yAxis);
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'weight-line');
+      svg.setAttribute('width', records.length * 32);
+      svg.setAttribute('height', '200');
+      chart.appendChild(svg);
+
+      const points = [];
+      let prevWeight = null;
+      records.forEach((rec, idx) => {
+        const col = document.createElement('div');
+        col.className = 'bar-column';
+        col.innerHTML = `<div>${rec.date.split('-')[2]}</div>`;
+        if (rec.items) {
+          rec.items.forEach(item => {
+            const block = document.createElement('div');
+            block.className = 'block ' + getCategory(item);
+            col.appendChild(block);
+          });
+        }
+        let weight = prevWeight;
+        if (rec.weight) {
+          weight = parseFloat(rec.weight);
+          prevWeight = weight;
+        }
+        if (weight !== null) {
+          const y = 200 - ((weight - 50) / 30) * 200;
+          const point = document.createElement('div');
+          point.className = 'weight-point';
+          point.textContent = weight + 'kg';
+          point.style.bottom = y + 'px';
+          col.appendChild(point);
+          points.push({ x: idx * 32 + 10, y });
+        }
+        col.onclick = () => showEditDelete(rec.date);
+        wrapper.appendChild(col);
+      });
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', points[i].x);
+        line.setAttribute('y1', points[i].y);
+        line.setAttribute('x2', points[i + 1].x);
+        line.setAttribute('y2', points[i + 1].y);
+        line.setAttribute('stroke', 'navy');
+        line.setAttribute('stroke-width', '2');
+        svg.appendChild(line);
+      }
+      chart.appendChild(wrapper);
+    }
+
+    function showEditDelete(date) {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const matched = records.filter(r => r.date === date);
+      if (matched.length === 0) return;
+      const win = window.open('', '_blank');
+      win.document.write(`<h2>${date} の記録</h2>`);
+      matched.forEach((m, index) => {
+        win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
+        if (m.weight) win.document.write(`<p><strong>${m.weight}kg</strong></p>`);
+        if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
+        win.document.write(
+          `<button onclick="window.opener.editRecord('${date}', ${index});window.close();">修正</button> ` +
+          `<button onclick="window.opener.deleteRecord('${date}', ${index});window.close();">削除</button>`
+        );
+        win.document.write('<hr>');
       });
     }
-    let weight = prevWeight;
-    if (rec.weight) {
-      weight = parseFloat(rec.weight);
-      prevWeight = weight;
+
+    function editRecord(date, index) {
+      const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const matched = records.filter(r => r.date === date);
+      const target = matched[index];
+      if (!target) return;
+      dateInput.value = target.date;
+      weightInput.value = target.weight || '';
+      noteInput.value = target.note || '';
+      selectedExercises = [...target.items];
+      document.querySelectorAll('.exercise-label').forEach(el => {
+        el.classList.remove('selected', 'muscle', 'cardio');
+        if (selectedExercises.includes(el.textContent)) {
+          el.classList.add('selected');
+          const cat = getCategory(el.textContent);
+          el.classList.add(cat === '筋トレ' ? 'muscle' : '有酸素' ? 'cardio' : '');
+        }
+      });
+      deleteRecord(date, index);
     }
-    if (weight !== null) {
-      const y = 200 - ((weight - 50) / 30) * 200;
-      const point = document.createElement('div');
-      point.className = 'weight-point';
-      point.textContent = weight + 'kg';
-      point.style.bottom = y + 'px';
-      col.appendChild(point);
-      points.push({ x: idx * 32 + 10, y });
+
+    function deleteRecord(date, index) {
+      let records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
+      const filtered = records.filter((r, i) => {
+        if (r.date !== date) return true;
+        const sameDate = records.filter(x => x.date === date);
+        return !(sameDate.indexOf(r) === index);
+      });
+      localStorage.setItem('trainingRecords', JSON.stringify(filtered));
+      renderChart();
     }
-    col.onclick = () => showEditDelete(rec.date);
-    wrapper.appendChild(col);
-  });
 
-  for (let i = 0; i < points.length - 1; i++) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', points[i].x);
-    line.setAttribute('y1', points[i].y);
-    line.setAttribute('x2', points[i + 1].x);
-    line.setAttribute('y2', points[i + 1].y);
-    line.setAttribute('stroke', 'navy');
-    line.setAttribute('stroke-width', '2');
-    svg.appendChild(line);
-  }
-  chart.appendChild(wrapper);
-}
-
-function showEditDelete(date) {
-  const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-  const matched = records.filter(r => r.date === date);
-  if (matched.length === 0) return;
-  const win = window.open('', '_blank');
-  win.document.write(`<h2>${date} の記録</h2>`);
-  matched.forEach((m, index) => {
-    win.document.write('<ul>' + m.items.map(i => `<li>${i}</li>`).join('') + '</ul>');
-    if (m.weight) win.document.write(`<p><strong>${m.weight}kg</strong></p>`);
-    if (m.note) win.document.write(`<p><em>${m.note}</em></p>`);
-    win.document.write(
-      `<button onclick="window.opener.editRecord('${date}', ${index});window.close();">修正</button> ` +
-      `<button onclick="window.opener.deleteRecord('${date}', ${index});window.close();">削除</button>`
-    );
-    win.document.write('<hr>');
-  });
-}
-
-function editRecord(date, index) {
-  const records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-  const matched = records.filter(r => r.date === date);
-  const target = matched[index];
-  if (!target) return;
-  dateInput.value = target.date;
-  weightInput.value = target.weight || '';
-  noteInput.value = target.note || '';
-  selectedExercises = [...target.items];
-  document.querySelectorAll('.exercise-label').forEach(el => {
-    el.classList.remove('selected', 'muscle', 'cardio');
-    if (selectedExercises.includes(el.textContent)) {
-      el.classList.add('selected');
-      const cat = getCategory(el.textContent);
-      el.classList.add(cat === '筋トレ' ? 'muscle' : cat === '有酸素' ? 'cardio' : '');
-    }
-  });
-  deleteRecord(date, index);
-}
-
-function deleteRecord(date, index) {
-  let records = JSON.parse(localStorage.getItem('trainingRecords') || '[]');
-  const filtered = records.filter((r, i) => {
-    if (r.date !== date) return true;
-    const sameDate = records.filter(x => x.date === date);
-    return !(sameDate.indexOf(r) === index);
-  });
-  localStorage.setItem('trainingRecords', JSON.stringify(filtered));
-  renderChart();
-}
-</script>
+    renderChart();
+  </script>
+</body>
+</html>
